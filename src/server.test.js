@@ -4,17 +4,18 @@ import http from 'node:http';
 
 process.env.NODE_ENV = 'test';
 process.env.STUDY_GROUP_DB_PATH = ':memory:';
-const [{ default: app }, { initDb, getDb }] = await Promise.all([
+const [{ default: app, createApp }, { initDb, getDb }, { registerUser }] = await Promise.all([
   import('./server.js'),
-  import('./db/database.js')
+  import('./db/database.js'),
+  import('./services/authService.js')
 ]);
 
-async function withServer(callback) {
+async function withServer(callback, appToServe = app) {
   initDb();
   getDb().prepare('DELETE FROM memberships').run();
   getDb().prepare('UPDATE study_groups SET is_open = 1').run();
 
-  const server = http.createServer(app);
+  const server = http.createServer(appToServe);
   await new Promise((resolve) => server.listen(0, resolve));
   const port = server.address().port;
   const baseUrl = `http://localhost:${port}`;
@@ -26,11 +27,11 @@ async function withServer(callback) {
   }
 }
 
-async function signIn(baseUrl) {
+async function signIn(baseUrl, email = 'student@example.com', password = 'securePassword123') {
   const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'student@example.com', password: 'securePassword123' })
+    body: JSON.stringify({ email, password })
   });
   return { response: loginResponse, data: await loginResponse.json() };
 }
@@ -126,5 +127,49 @@ test('joining with an invalid study group ID returns 400', async () => {
     });
 
     assert.strictEqual(response.status, 400);
+  });
+});
+
+test('PATCH without a session returns 401 before calling the update service', async () => {
+  let serviceCalled = false;
+  const unauthenticatedTestApp = createApp({
+    updateStudyGroup() {
+      serviceCalled = true;
+      throw new Error('Update service should not be called');
+    }
+  });
+
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/study-groups/1`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Updated group' })
+    });
+
+    assert.strictEqual(response.status, 401);
+    assert.strictEqual(serviceCalled, false);
+  }, unauthenticatedTestApp);
+});
+
+test('PATCH by a signed-in non-owner returns 403 from the update service', async () => {
+  await withServer(async (baseUrl) => {
+    const email = `non-owner-${Date.now()}@example.com`;
+    const password = 'securePassword123';
+    registerUser(email, password);
+    const { data: login } = await signIn(baseUrl, email, password);
+    const response = await fetch(`${baseUrl}/api/study-groups/1`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${login.accessToken}`
+      },
+      body: JSON.stringify({ name: 'Updated group' })
+    });
+
+    assert.strictEqual(response.status, 403);
+    assert.strictEqual(
+      getDb().prepare('SELECT name FROM study_groups WHERE id = 1').get().name,
+      'Math Wizards'
+    );
   });
 });

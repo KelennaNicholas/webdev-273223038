@@ -61,3 +61,43 @@ export function joinStudyGroup(userId, groupId, database = getDb()) {
     throw error;
   }
 }
+
+export function updateStudyGroup(userId, groupId, updates, database = getDb()) {
+  const group = database.prepare(`
+    SELECT id, name, subject, description, creator_id
+    FROM study_groups
+    WHERE id = ?
+  `).get(groupId);
+
+  if (!group) {
+    throw new StudyGroupError('GROUP_NOT_FOUND', 'Study group not found');
+  }
+  if (group.creator_id !== userId) {
+    throw new StudyGroupError('FORBIDDEN', 'Only the group creator may update this study group');
+  }
+
+  const allowedFields = ['name', 'subject', 'description'];
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+    throw new StudyGroupError('INVALID_UPDATE', 'Provide at least one group field to update');
+  }
+
+  const fields = Object.keys(updates);
+  if (fields.length === 0 || fields.some((field) => !allowedFields.includes(field))) {
+    throw new StudyGroupError('INVALID_UPDATE', 'Provide valid group fields to update');
+  }
+
+  const values = fields.map((field) => {
+    const value = updates[field];
+    if (typeof value !== 'string' || value.trim() === '') {
+      throw new StudyGroupError('INVALID_UPDATE', `${field} must be a non-empty string`);
+    }
+    return value.trim();
+  });
+  const assignments = fields.map((field) => `${field} = ?`).join(', ');
+  database.prepare(`UPDATE study_groups SET ${assignments} WHERE id = ?`).run(...values, groupId);
+  return database.prepare(`
+    SELECT id, name, subject, description
+    FROM study_groups
+    WHERE id = ?
+  `).get(groupId);
+}

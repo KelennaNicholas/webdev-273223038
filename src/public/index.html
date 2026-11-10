@@ -39,8 +39,12 @@
   <!-- Study Groups List Section (AC-14, AC-15, AC-16) -->
   <div id="app-section" class="hidden">
     <h2>Available Study Groups</h2>
-    <div id="groups-error" class="error" role="alert"></div>
-    <div id="groups-container"></div>
+    <div id="groups-loading" role="status" aria-live="polite" hidden>Loading study groups…</div>
+    <div id="groups-error" class="error" role="alert" hidden>
+      <p>We couldn’t load study groups. Check your connection and try again.</p>
+      <button id="retry-groups" type="button">Try again</button>
+    </div>
+    <div id="groups-container" aria-busy="false"></div>
     <section aria-labelledby="memberships-heading">
       <h2 id="memberships-heading">My Study Groups</h2>
       <div id="memberships-container" aria-live="polite">
@@ -55,12 +59,16 @@
     const appSection = document.getElementById('app-section');
     const loginError = document.getElementById('login-error');
     const groupsContainer = document.getElementById('groups-container');
+    const groupsLoading = document.getElementById('groups-loading');
     const groupsError = document.getElementById('groups-error');
+    const retryGroups = document.getElementById('retry-groups');
     const membershipsContainer = document.getElementById('memberships-container');
     const membershipsEmpty = document.getElementById('memberships-empty');
     let accessToken = null;
     const joinedGroups = new Map();
     const joiningGroups = new Set();
+
+    retryGroups.addEventListener('click', loadStudyGroups);
 
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -89,28 +97,36 @@
     });
 
     async function loadStudyGroups() {
-      groupsError.textContent = '';
+      groupsError.hidden = true;
+      groupsLoading.hidden = false;
+      groupsContainer.setAttribute('aria-busy', 'true');
+      groupsContainer.replaceChildren();
+
       try {
         const res = await fetch('/api/study-groups');
         if (!res.ok) {
-          throw new Error('Failed to load study groups.');
+          throw new Error('Study groups request failed.');
         }
         const groups = await res.json();
-        groupsContainer.replaceChildren();
+        if (!Array.isArray(groups)) {
+          throw new Error('Study groups response was invalid.');
+        }
 
+        groupsLoading.hidden = true;
+        groupsContainer.setAttribute('aria-busy', 'false');
         if (!groups || groups.length === 0) {
-          // AC-16: Clear empty-state message
           const emptyState = document.createElement('p');
           emptyState.className = 'empty-state';
-          emptyState.textContent = 'No study groups available at the moment.';
+          emptyState.textContent = 'There are no study groups yet. Check back soon to find a group to join.';
           groupsContainer.appendChild(emptyState);
           return;
         }
 
-        // AC-15: Each available group's name and subject
         groups.forEach((group) => groupsContainer.appendChild(createGroupCard(group)));
       } catch (err) {
-        groupsError.textContent = 'Failed to load study groups. Please try again.';
+        groupsLoading.hidden = true;
+        groupsContainer.setAttribute('aria-busy', 'false');
+        groupsError.hidden = false;
       }
     }
 
