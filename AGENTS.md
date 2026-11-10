@@ -53,10 +53,11 @@ that talks to the database directly is a second, unguarded way into your data: n
 ## Always ask before
 - deleting files or folders
 - editing a migration that has already run
+- running a migration against an existing database or changing existing group or membership records
 - installing or removing dependencies
 - pushing, tagging or changing CI
 - anything that touches secrets or `.env`
-- changing an authentication or authorization rule
+- changing an authentication, authorization, membership-eligibility, or group-visibility rule
 - adding, renaming or removing an MCP tool
 - changing a coverage threshold
 - sending user data to a third-party model

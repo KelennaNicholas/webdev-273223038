@@ -77,11 +77,24 @@ Responsive browser app: React with TypeScript and Vite for the frontend; Node.js
 - [AC-15] A signed-in student who opens the study-groups list sees each available group's name and subject.
 - [AC-16] A signed-in student who opens the study-groups list when no groups are available sees a clear empty-state message.
 
+### Slice 2: joining a study group
+
+- [AC-17] A signed-in student who joins an open study group sees it in their memberships, and exactly one membership record is saved for that student and group.
+- [AC-18] A student who tries to join a group they already belong to receives a 409 Conflict response and no duplicate membership record is created.
+- [AC-19] A student who tries to join a closed study group receives a 409 Conflict response, and no membership record is created.
+- [AC-20] A signed-in student who tries to join a nonexistent study group receives a 404 Not Found response, and no membership record is created.
+- [AC-21] A student who tries to join a study group without signing in receives a 401 Unauthorized response, and no membership record is created.
+
 ## Traceability
 <!-- Filled in from Exercise 3 onward: each AC id, and the test that names it. -->
 | Criterion | Test |
 | --- | --- |
 | AC-1 |  |
+| AC-17 |  |
+| AC-18 |  |
+| AC-19 |  |
+| AC-20 |  |
+| AC-21 |  |
 
 ## Spec vs result
 <!-- After the agent builds the slice: which criteria passed, which it missed or reinterpreted, and what you changed in this spec because of it. -->

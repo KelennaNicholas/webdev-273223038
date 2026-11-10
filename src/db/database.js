@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 
 const dbDir = path.resolve('data');
 if (!fs.existsSync(dbDir)) {
@@ -9,7 +10,39 @@ if (!fs.existsSync(dbDir)) {
 
 const dbPath = path.join(dbDir, 'app.db');
 const db = new DatabaseSync(dbPath);
+const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
+const migrations = ['001_study_group_memberships.sql'];
 const seededPasswordHash = '737475647967726f7570737365656421:faadcb76da7362749289bd2adf0f0c52cb358d4735909218a2475d9d09514abf26fe7acc5903e579592cbc894a4418e716fc5d9f601534522afaa8de3eb47b76';
+
+export function applyMigrations(targetDb = db) {
+  targetDb.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  const appliedVersions = new Set(
+    targetDb.prepare('SELECT version FROM schema_migrations').all().map((row) => row.version)
+  );
+
+  for (const migration of migrations) {
+    if (appliedVersions.has(migration)) {
+      continue;
+    }
+
+    const sql = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
+    targetDb.exec('BEGIN');
+    try {
+      targetDb.exec(sql);
+      targetDb.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(migration);
+      targetDb.exec('COMMIT');
+    } catch (error) {
+      targetDb.exec('ROLLBACK');
+      throw error;
+    }
+  }
+}
 
 export function initDb() {
   db.exec(`
