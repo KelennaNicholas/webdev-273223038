@@ -49,7 +49,7 @@ test('database migration creates unique memberships and defaults groups to open'
       /UNIQUE constraint failed/
     );
     assert.strictEqual(db.prepare('SELECT COUNT(*) AS count FROM memberships').get().count, 1);
-    assert.strictEqual(db.prepare('SELECT COUNT(*) AS count FROM schema_migrations').get().count, 1);
+    assert.strictEqual(db.prepare('SELECT COUNT(*) AS count FROM schema_migrations').get().count, 2);
   } finally {
     db.close();
   }

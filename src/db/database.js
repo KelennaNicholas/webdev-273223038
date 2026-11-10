@@ -8,10 +8,13 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.join(dbDir, 'app.db');
+const dbPath = process.env.STUDY_GROUP_DB_PATH || path.join(dbDir, 'app.db');
 const db = new DatabaseSync(dbPath);
 const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
-const migrations = ['001_study_group_memberships.sql'];
+const migrations = [
+  '001_study_group_memberships.sql',
+  '002_user_sessions.sql'
+];
 const seededPasswordHash = '737475647967726f7570737365656421:faadcb76da7362749289bd2adf0f0c52cb358d4735909218a2475d9d09514abf26fe7acc5903e579592cbc894a4418e716fc5d9f601534522afaa8de3eb47b76';
 
 export function applyMigrations(targetDb = db) {
@@ -61,6 +64,7 @@ export function initDb() {
       FOREIGN KEY (creator_id) REFERENCES users(id)
     );
   `);
+  applyMigrations(db);
 
   // Seed initial data if tables are empty
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;

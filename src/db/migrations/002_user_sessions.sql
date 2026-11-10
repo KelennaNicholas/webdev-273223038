@@ -1,0 +1,7 @@
+CREATE TABLE user_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
