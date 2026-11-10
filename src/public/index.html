@@ -13,6 +13,7 @@
     .error { color: #dc2626; margin-top: 5px; }
     .hidden { display: none; }
     .empty-state { text-align: center; color: #6b7280; padding: 40px 0; font-style: italic; }
+    .status { color: #166534; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -38,7 +39,14 @@
   <!-- Study Groups List Section (AC-14, AC-15, AC-16) -->
   <div id="app-section" class="hidden">
     <h2>Available Study Groups</h2>
+    <div id="groups-error" class="error" role="alert"></div>
     <div id="groups-container"></div>
+    <section aria-labelledby="memberships-heading">
+      <h2 id="memberships-heading">My Study Groups</h2>
+      <div id="memberships-container" aria-live="polite">
+        <p id="memberships-empty" class="empty-state">You have not joined any study groups yet.</p>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -47,6 +55,12 @@
     const appSection = document.getElementById('app-section');
     const loginError = document.getElementById('login-error');
     const groupsContainer = document.getElementById('groups-container');
+    const groupsError = document.getElementById('groups-error');
+    const membershipsContainer = document.getElementById('memberships-container');
+    const membershipsEmpty = document.getElementById('memberships-empty');
+    let accessToken = null;
+    const joinedGroups = new Map();
+    const joiningGroups = new Set();
 
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -62,6 +76,7 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
+          accessToken = data.accessToken;
           authSection.classList.add('hidden');
           appSection.classList.remove('hidden');
           loadStudyGroups();
@@ -74,37 +89,113 @@
     });
 
     async function loadStudyGroups() {
+      groupsError.textContent = '';
       try {
         const res = await fetch('/api/study-groups');
+        if (!res.ok) {
+          throw new Error('Failed to load study groups.');
+        }
         const groups = await res.json();
-        groupsContainer.innerHTML = '';
+        groupsContainer.replaceChildren();
 
         if (!groups || groups.length === 0) {
           // AC-16: Clear empty-state message
-          groupsContainer.innerHTML = '<div class="empty-state">No study groups available at the moment. Create one to get started!</div>';
+          const emptyState = document.createElement('p');
+          emptyState.className = 'empty-state';
+          emptyState.textContent = 'No study groups available at the moment.';
+          groupsContainer.appendChild(emptyState);
           return;
         }
 
         // AC-15: Each available group's name and subject
-        groups.forEach(group => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <h3>${escapeHtml(group.name)}</h3>
-            <p><strong>Subject:</strong> ${escapeHtml(group.subject)}</p>
-            <p>${escapeHtml(group.description)}</p>
-          `;
-          groupsContainer.appendChild(card);
-        });
+        groups.forEach((group) => groupsContainer.appendChild(createGroupCard(group)));
       } catch (err) {
-        groupsContainer.innerHTML = '<div class="error">Failed to load study groups.</div>';
+        groupsError.textContent = 'Failed to load study groups. Please try again.';
       }
     }
 
-    function escapeHtml(str) {
-      return str.replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-      );
+    function createGroupCard(group) {
+      const card = document.createElement('article');
+      card.className = 'card';
+
+      const heading = document.createElement('h3');
+      heading.textContent = group.name;
+      card.appendChild(heading);
+
+      const subject = document.createElement('p');
+      subject.textContent = `Subject: ${group.subject}`;
+      card.appendChild(subject);
+
+      const description = document.createElement('p');
+      description.textContent = group.description;
+      card.appendChild(description);
+
+      const joinButton = document.createElement('button');
+      joinButton.type = 'button';
+      joinButton.textContent = joinedGroups.has(group.id) ? 'Joined' : 'Join group';
+      joinButton.disabled = joinedGroups.has(group.id) || joiningGroups.has(group.id);
+      joinButton.setAttribute('aria-label', `Join ${group.name}`);
+      card.appendChild(joinButton);
+
+      const status = document.createElement('p');
+      status.className = joinedGroups.has(group.id) ? 'status' : 'error';
+      status.setAttribute('aria-live', 'polite');
+      card.appendChild(status);
+
+      joinButton.addEventListener('click', () => joinGroup(group, joinButton, status));
+      return card;
+    }
+
+    async function joinGroup(group, joinButton, status) {
+      if (!accessToken || joiningGroups.has(group.id) || joinedGroups.has(group.id)) {
+        return;
+      }
+
+      joiningGroups.add(group.id);
+      joinButton.disabled = true;
+      joinButton.textContent = 'Joining…';
+      status.className = 'status';
+      status.textContent = '';
+
+      try {
+        const res = await fetch(`/api/study-groups/${encodeURIComponent(group.id)}/join`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          status.className = 'error';
+          status.textContent = res.status === 409
+            ? data.error || 'This group cannot be joined.'
+            : res.status === 401
+              ? 'Your sign-in has expired. Please sign in again.'
+              : data.error || 'Unable to join this group. Please try again.';
+          joinButton.textContent = 'Join group';
+          joinButton.disabled = res.status === 401;
+          if (res.status === 401) {
+            accessToken = null;
+            appSection.classList.add('hidden');
+            authSection.classList.remove('hidden');
+          }
+          return;
+        }
+
+        joinedGroups.set(group.id, data);
+        joinButton.textContent = 'Joined';
+        status.className = 'status';
+        status.textContent = 'You joined this study group.';
+        const membership = document.createElement('p');
+        membership.textContent = `${group.name} — ${group.subject}`;
+        membershipsContainer.appendChild(membership);
+        membershipsEmpty.classList.add('hidden');
+      } catch (err) {
+        status.className = 'error';
+        status.textContent = 'Network error while joining. Please try again.';
+        joinButton.textContent = 'Join group';
+        joinButton.disabled = false;
+      } finally {
+        joiningGroups.delete(group.id);
+      }
     }
   </script>
 </body>
