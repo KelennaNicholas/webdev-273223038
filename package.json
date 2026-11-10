@@ -1,13 +1,15 @@
 {
   "name": "webdev-273223038",
   "version": "1.0.0",
+  "type": "module",
   "description": "This repository is your workspace for the whole course: Exercise 1 in `mcp-server/`, and your project (Exercises 2–5) in the rest of it. Everything runs in your browser through GitHub Codespaces, so nothing needs to be installed on your laptop.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "mcp": "node mcp-server/server.js",
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
@@ -19,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/KelennaNicholas/webdev-273223038/issues"
   },
-  "homepage": "https://github.com/KelennaNicholas/webdev-273223038#readme"
+  "homepage": "https://github.com/KelennaNicholas/webdev-273223038#readme",
+  "dependencies": {
+    "express": "^5.3.0"
+  }
 }

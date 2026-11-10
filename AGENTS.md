@@ -4,18 +4,20 @@ Read this file at the start of every session. Keep it short and correct; update 
 
 ## Project
 <!-- One or two sentences: what the app does and for whom. Link SPEC.md. -->
-See `SPEC.md` for goals, non-goals and acceptance criteria.
+Study Groups helps students discover, join, and manage study groups around subjects they want to learn, while coordinating sessions and sharing notes with peers. It is designed for university and college students who want a simple browser-based way to connect with classmates and study together. See [SPEC.md](./SPEC.md) for the project goals, non-goals, and acceptance criteria.
 
 ## Commands
 <!-- How to install, run, test. Keep these exact and working. -->
-- Install: 
-- Run: 
-- Test: 
+- Install: npm install
+- Run: npm start
+- Test: npm test
 - Coverage: 
-- MCP server: 
+- MCP server: npm run --silent mcp
 
 ## Conventions
 <!-- Folder layout, naming, where business rules live, how errors are returned to the client. -->
+- App code lives under `src/` with feature folders and tests colocated near the code they cover.
+- Business rules live in service layer modules, not route handlers or database code; errors are returned as structured domain errors and mapped to HTTP/MCP responses at the edges.
 
 ## Layers
 <!-- Fill in the file or folder for each layer. -->
