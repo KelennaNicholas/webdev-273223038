@@ -26,3 +26,8 @@ One entry per agent session, newest at the bottom. Be honest: what went wrong is
 - Checkpoints: Approve the written plan before implementation; run `npm test` and inspect the diff after each step; stop and ask before any action listed under "Always ask before" in `AGENTS.md`.
 - Went wrong: Nothing; this entry records boundaries before implementation.
 - Changed by hand: Added the Slice 2 autonomy and review checkpoints to the agent log.
+
+## 2026-23-11 · Exercise 3 plan
+Goal: a written plan for the booking feature, no code
+Autonomy: the agent works alone within one step of the plan; I read the diff before every commit
+Checkpoints: plan review before any code, npm test green before each commit, a permission prompt for everything in "Always ask before"

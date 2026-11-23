@@ -9,7 +9,7 @@ Study Groups helps students discover, join, and manage study groups around subje
 ## Commands
 <!-- How to install, run, test. Keep these exact and working. -->
 - Install: npm install
-- Run: npm start
+- Run: node src/server.js
 - Test: npm test
 - Coverage: 
 - MCP server: npm run --silent mcp
@@ -51,16 +51,18 @@ that talks to the database directly is a second, unguarded way into your data: n
 - A test is evidence. Changing a test so the code passes destroys the evidence.
 
 ## Always ask before
-- deleting files or folders
+- deleting or renaming files or folders
 - editing a migration that has already run
-- running a migration against an existing database or changing existing group or membership records
+- running a migration against the existing database
+- changing existing group or membership records
 - installing or removing dependencies
-- pushing, tagging or changing CI
 - anything that touches secrets or `.env`
-- changing an authentication, authorization, membership-eligibility, or group-visibility rule
-- adding, renaming or removing an MCP tool
+- changing authentication or authorization rules
+- changing membership eligibility, duplicate-membership, closed-group, or group-visibility rules
+- changing the join-study-group endpoint or its 401, 404, or 409 behavior
+- changing an existing `join_study_group` MCP tool or adding a tool that bypasses the service layer
 - changing a coverage threshold
-- sending user data to a third-party model
+- sending student data to an external model
 
 ## Never
 - commit secrets, passwords, API keys or an OAuth client secret
